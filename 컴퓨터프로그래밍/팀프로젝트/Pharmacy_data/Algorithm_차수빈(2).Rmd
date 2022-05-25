@@ -115,11 +115,14 @@ openByDay <- function(df_gu){
   # 해당 요일에 여는 약국 찾기
   df_day <- openToday(df_gu,searchday)
   
-  # 적절한 정보 제공
+  # 약국 운영시간 가져오기
   start = paste0("시작(",searchday,")") # 약국 시작
   end = paste0("마감(",searchday,")") # 약국 마감
-  night = paste0("야간운영(",searchday,")") # 야간 운영 여부
-  df_openday <- df_day[,c("약국명","주소","대표전화",start,end,night)]
+  
+  # 해당 요일에 여는 약국들 중 야간 운영을 하는 약국을 찾기
+  night_filter = paste0("야간운영(",searchday,")")
+  df_night <- df_day[c(which(df_day[,night_filter])),]
+  df_openday <- df_night[,c("약국명","주소","대표전화",start,end)]
   
   View(df_openday)
 }
@@ -129,7 +132,6 @@ openByDay <- function(df_gu){
 - 사용자가 입력한 행정구 내의 약국을 보여주면 된다.
 ```{r}
 # View(df_gu)
-# knit할 때 실행되지 않도록 해놓은거..
 ```
 
 * switch문으로 옵션 묶기
