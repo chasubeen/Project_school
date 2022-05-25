@@ -1,0 +1,144 @@
+---
+title: "Algorithm_차수빈(2)"
+output: word_document
+---
+### 전처리된 데이터 파일 가져오기
+1. 약국 운영 정보 가져오기
+```{r}
+df1 <- read.csv("seoul_pharmacy_final.csv")
+
+# 글꼴 깨짐 문제 발생 -> 컬럼명 재설정
+new_colname <- c("약국명","주소","대표전화","행정구","시작(월)","마감(월)","시작(화)","마감(화)","시작(수)","마감(수)","시작(목)","마감(목)","시작(금)","마감(금)","시작(토)","마감(토)","시작(일)","마감(일)","시작(공휴일)","마감(공휴일)","일운영","공휴일운영","야간운영(월)","야간운영(화)","야간운영(수)","야간운영(목)","야간운영(금)","야간운영(토)","야간운영(일)","야간운영(공휴일)")
+colnames(df1) <- new_colname
+
+View(df1) # 개발 시 데이터 확인을 위한 코드
+```
+
+2. 2022년 공휴일 정보 가져오기
+```{r}
+# 파일 읽어오기
+holiday_df <- read.csv("holiday_2022.csv")
+View(holiday_df)
+
+# 2022년의 공휴일 날짜 정보를 벡터로 저장
+holiday_2022 <- holiday_df$날짜
+```
+
+### 입력
+1. 지역: 사용자에게 '직접' 입력받는다.
+```{r}
+place <- readline(prompt = "검색하고자 하는 지역을 행정구 단위로 입력해 주세요 : ")
+cat("사용자가 입력한 지역은",place,"입니다.")
+```
+
+2. 현재 시간: 시스템 시간을 자동으로 읽어온다.
+```{r}
+# 시간 부분만을 가져와서 문자열로 형변환
+curtime <- as.character(strsplit(date()," ")[[1]][4])
+
+# 시각에서 초를 제외한 시간, 분 추출 -> numeric으로 변경
+curtime <- as.numeric(substr(gsub(":","",curtime),1,4))
+# gsub(a,b,data): data 내에 포함된 a 문자를 b 문자로 변경
+
+# 530 <= (현재 시각) <= 2929가 되도록 형식 맞춰주기 
+curtime <- ifelse((curtime<530),curtime + 2400,curtime)
+```
+
+3. 현재 요일
+* 530 <= (현재 시각) <= 2929가 되도록 형식이 맞추어져 있음
+* 0시부터 5시 29까지는 전날에 해당한다. 
+```{r}
+curday <- ifelse((curtime >= 2400) & (curtime <= 2929),
+                 weekdays(Sys.Date() - 1), weekdays(Sys.Date())) 
+
+# 공휴일 처리
+curday <- ifelse((curday %in% holiday_2022),"공휴일",curday)
+
+# 한글자씩 나누고 제일 앞의 글자 가져오기("요일" 날려버리기)
+curday <- ifelse((curday != "공휴일"),strsplit(curday,"")[[1]][1],"공휴일") 
+```
+
+4. 제공받을 정보
+```{r}
+# 옵션 선택하기
+option = readline(prompt = "어떤 정보를 얻고 싶으신가요?\n1) 현재 운영중인 약국 2) 요일별 운영정보 3) 인근 약국 >> ")
+```
+
+### 출력
+* 사용자가 선택한 옵션에 따라 적절한 정보를 제공한다.
+
+1. 사용자가 입력한 행정구 내의 약국 가져오기
+```{r}
+df_gu <- df1[c(which(df1$행정구 == place)),]
+View(df_gu)
+```
+
+2. 운영 여부 필터링
+* 요일이 일요일이나 공휴일인 경우 운영시간에 NA 발생 
+* -> 이후 과정에서 정확한 필터링이 이루어지지 않을 가능성이 존재한다.
+* 해당 요일에 운영하는지부터 확인해야 한다.
+```{r}
+# 일요일 or 공휴일
+openToday <- function(df_gu,day){
+  if((day == "일") | (day == "공휴일")){
+  run_filter = paste0(day,"운영") # "일운영" 또는 "공휴일운영"
+  df_run <- df_gu[c(which(df_gu[,run_filter])),] # 해당 요일에 운영하는 약국 
+}else{ # 요일: 월 ~ 토
+  df_run <- df_gu
+}
+  return(df_run)
+}
+```
+
+3. 선택한 옵션에 따른 필터링
+- 각각의 옵션에 대해 함수로 만들어 두고, 최종 알고리즘에서 함수로 호출하여 사용한다.
+
+옵션 1) 현재 운영중인 약국 찾기
+```{r}
+nowRunning <- function(df_gu,curday){
+  df_today <- openToday(df_gu,curday)
+  start = paste0("시작(",curday,")") # 약국 시작
+  end = paste0("마감(",curday,")") # 약국 마감
+  df_current <- df_today[c(which((df_today[,start] <= curtime) & (df_today[,end] >= curtime))),c("약국명","주소","대표전화",start,end)]
+  
+  View(df_current)
+}
+```
+
+옵션 2) 요일별 운영 정보
+```{r}
+openByDay <- function(df_gu){
+  # 사용자에게 검색하고자 하는 요일을 입력받음
+  searchday <- readline(prompt = "검색하고자 하는 요일을 입력해 주세요\n(예: 월, 화, ... ,일, 공휴일)>> ")
+  cat("사용자가 입력한 요일은",searchday,"입니다.")
+  
+  # 해당 요일에 여는 약국 찾기
+  df_day <- openToday(df_gu,searchday)
+  
+  # 적절한 정보 제공
+  start = paste0("시작(",searchday,")") # 약국 시작
+  end = paste0("마감(",searchday,")") # 약국 마감
+  night = paste0("야간운영(",searchday,")") # 야간 운영 여부
+  df_openday <- df_day[,c("약국명","주소","대표전화",start,end,night)]
+  
+  View(df_openday)
+}
+```
+
+옵션 3) 근처에 있는 약국의 전체 정보 조회
+- 사용자가 입력한 행정구 내의 약국을 보여주면 된다.
+```{r}
+# View(df_gu)
+# knit할 때 실행되지 않도록 해놓은거..
+```
+
+* switch문으로 옵션 묶기
+* 메인 실행 코드
+```{r}
+switch(option,
+       "1" = {nowRunning(df_gu,curday)},
+       "2" = {openByDay(df_gu)},
+       "3" = {View(df_gu)},
+       {print("옵션을 잘못 입력하셨습니다.")})
+```
+
