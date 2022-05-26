@@ -61,7 +61,7 @@ curday <- ifelse((curday != "공휴일"),strsplit(curday,"")[[1]][1],"공휴일"
 4. 제공받을 정보
 ```{r}
 # 옵션 선택하기
-option = readline(prompt = "어떤 정보를 얻고 싶으신가요?\n1) 현재 운영중인 약국 2) 요일별 운영정보 3) 인근 약국 >> ")
+option = readline(prompt = "어떤 정보를 얻고 싶으신가요?\n1) 현재 운영중인 약국 2) 요일별 야간운영정보 3) 인근 약국 >> ")
 ```
 
 ### 출력
@@ -105,7 +105,7 @@ nowRunning <- function(df_gu,curday){
 }
 ```
 
-옵션 2) 요일별 운영 정보
+옵션 2) 요일별 야간 운영 정보
 ```{r}
 openByDay <- function(df_gu){
   # 사용자에게 검색하고자 하는 요일을 입력받음
@@ -131,7 +131,7 @@ openByDay <- function(df_gu){
 옵션 3) 근처에 있는 약국의 전체 정보 조회
 - 사용자가 입력한 행정구 내의 약국을 보여주면 된다.
 ```{r}
-# View(df_gu)
+View(df_gu)
 ```
 
 * switch문으로 옵션 묶기
